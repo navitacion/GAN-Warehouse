@@ -33,18 +33,19 @@ class UpsampleConvBatchRelu(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, img_size=128):
         super(Discriminator, self).__init__()
 
         self.block = nn.Sequential(
-            ConvBatchRelu(3, out_channels=64, kernel_size=3, stride=2, padding=1),
-            ConvBatchRelu(64, out_channels=64, kernel_size=3, stride=2, padding=1),
-            ConvBatchRelu(64, out_channels=128, kernel_size=3, stride=2, padding=1),
-            ConvBatchRelu(128, out_channels=128, kernel_size=3, stride=2, padding=1),
+            ConvBatchRelu(3, img_size // 2, kernel_size=3, stride=2, padding=1),
+            ConvBatchRelu(img_size // 2, img_size // 2, kernel_size=3, stride=2, padding=1),
+            ConvBatchRelu(img_size // 2, img_size, kernel_size=3, stride=2, padding=1),
+            ConvBatchRelu(img_size, img_size, kernel_size=3, stride=2, padding=1),
         )
 
-        self.last = nn.Linear(8192, 1)
-        # self.last = nn.Linear(32768, 1)
+        after_shape = img_size // (2 ** 4)
+
+        self.last = nn.Linear(img_size * after_shape * after_shape, 1)
 
 
     def forward(self, x):
@@ -56,30 +57,33 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, z_dim=100):
+    def __init__(self, z_dim=100, img_size=128):
         super(Generator, self).__init__()
+        self.img_size = img_size
+        self.after_shape = img_size // (2 ** 4)
+
         self.first = nn.Sequential(
-            nn.Linear(z_dim, 8192),
-            nn.BatchNorm1d(8192),
+            nn.Linear(z_dim, int(self.img_size * self.after_shape * self.after_shape)),
+            nn.BatchNorm1d(int(self.img_size * self.after_shape * self.after_shape)),
             nn.ReLU(inplace=True)
         )
 
         self.block = nn.Sequential(
-            UpsampleConvBatchRelu(128, 128),
-            UpsampleConvBatchRelu(128, 64),
-            UpsampleConvBatchRelu(64, 64)
+            UpsampleConvBatchRelu(self.img_size, self.img_size),
+            UpsampleConvBatchRelu(self.img_size, self.img_size // 2),
+            UpsampleConvBatchRelu(self.img_size // 2, self.img_size // 2)
         )
 
         self.last = nn.Sequential(
             nn.Upsample(scale_factor=2),
-            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(self.img_size // 2, 3, kernel_size=3, stride=1, padding=1),
             nn.Tanh()
         )
 
 
     def forward(self, x):
         x = self.first(x)
-        x = torch.reshape(x, (-1, 128, 8, 8))
+        x = torch.reshape(x, (-1, self.img_size, self.after_shape, self.after_shape))
         x = self.block(x)
         x = self.last(x)
 
@@ -89,8 +93,8 @@ class Generator(nn.Module):
 if __name__ == '__main__':
     z = torch.randn(4, 200)
 
-    G = Generator(z_dim=200)
-    D = Discriminator()
+    G = Generator(z_dim=200, img_size=256)
+    D = Discriminator(img_size=256)
     out = G(z)
     print(out.size())
 
