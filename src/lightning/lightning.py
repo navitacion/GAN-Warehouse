@@ -187,9 +187,10 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
             gradient_loss = gradient_criterion(interpolated_out, interpolated)
 
             D_loss = true_D_loss + fake_D_loss + self.cfg.wgan_gp.gradientloss_weight * gradient_loss
-            logs = {'train/D_loss_valid': true_D_loss, 'train/D_loss_fake': fake_D_loss, 'train/D_loss_gradient': gradient_loss}
-
-            self.experiment.log_metrics(logs, step=self.cnt_train_step)
+            self.log('train/D_loss_valid', true_D_loss, on_epoch=True)
+            self.log('train/D_loss_fake', fake_D_loss, on_epoch=True)
+            self.log('train/D_loss_gradient', gradient_loss, on_epoch=True)
+            self.log('train/D_loss', D_loss, on_epoch=True)
 
             return {'loss': D_loss}
 
@@ -197,7 +198,7 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
         elif optimizer_idx == 1:
             g_fake_out = self.D(self.G(z))
             G_loss = torch.mean(g_fake_out)
-            self.experiment.log_metric('train/G_loss', G_loss, step=self.cnt_train_step)
+            self.log('train/G_loss', G_loss, on_epoch=True)
 
             # Update Counter
             self.cnt_train_step += 1
@@ -220,14 +221,14 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
         joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
         joined_images = np.transpose(joined_images, [1,2,0])
 
-        self.experiment.log_image(joined_images, name='genarative_img', step=self.current_epoch, image_channels='last')
+        self.logger.experiment.log_image(joined_images, name='genarative_img', step=self.current_epoch, image_channels='last')
 
         del joined_images, joined_images_tensor
 
         # Save checkpoints
         if self.checkpoint_path is not None:
             checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'wgan-gp*')))
-            self.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
+            self.logger.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
 
         return None
 

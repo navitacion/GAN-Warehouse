@@ -6,3 +6,4 @@ data/*
 checkpoints/*
 hydra_output/*
 .env
+gan-warehouse/*
