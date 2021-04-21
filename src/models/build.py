@@ -13,7 +13,7 @@ def build_model(type, cfg):
 
     model_dict = {
         'vae': [VAE(z_dim)],
-        'dcgan': [Generator(z_dim), Discriminator()],
+        'dcgan': [Generator(z_dim, img_size), Discriminator(img_size)],
         'wgan_gp': [WGAN_GP_Generator(z_dim, img_size), WGAN_GP_Discriminator(img_size)],
         'cyclegan':[
             CycleGAN_Unet_Generator_512(), CycleGAN_Unet_Generator_512(),
