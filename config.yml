@@ -1,0 +1,41 @@
+hydra:
+  run:
+    dir: hydra_output/
+
+train:
+  model: vae  # dcgan, wgan_gp, cyclegan
+  num_workers: 8
+  step_per_epoch: 1000
+  epoch: 400
+  batch_size: 16
+  lr: {"G": 0.0001, "D": 0.0001}
+  img_size: &image_size 512
+  z_dim: 200
+  seed: 42
+
+vae:
+  r_factor: 100000
+
+wgan_gp:
+  gradientloss_weight: 10
+
+cyclegan:
+  batch_size: 1
+  reconstr_w: 10
+  id_w: 5
+
+
+aug:
+  aug_train:
+    Resize: {"height": *image_size, "width": *image_size}
+    HorizontalFlip: {"p": 0.5}
+    VerticalFlip: {"p": 0.5}
+    Normalize: {"mean": [0.5, 0.5, 0.5], "std": [0.5, 0.5, 0.5]}
+
+  aug_val:
+    Resize: {"height": *image_size, "width": *image_size}
+    Normalize: {"mean": [0.5, 0.5, 0.5], "std": [0.5, 0.5, 0.5]}
+
+  aug_test:
+    Resize: {"height": *image_size, "width": *image_size}
+    Normalize: {"mean": [0.5, 0.5, 0.5], "std": [0.5, 0.5, 0.5]}
