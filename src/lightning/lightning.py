@@ -1,4 +1,6 @@
 import os, glob, random, time
+
+import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -17,14 +19,12 @@ from src.utils.losses import KL_R_Loss, Wasserstein, GradientPaneltyLoss
 
 # VAE - Lightning Module ---------------------------------------------------------------------------
 class VAE_LightningSystem(pl.LightningModule):
-    def __init__(self, net, cfg, experiment):
+    def __init__(self, net, cfg):
         super(VAE_LightningSystem, self).__init__()
         self.net = net
         self.lr = cfg.train.lr['G']
-        self.experiment = experiment
         self.epoch = cfg.train.epoch
         self.r_factor = cfg.vae.r_factor
-        self.step = 0
 
     def configure_optimizers(self):
         self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr)
@@ -36,7 +36,7 @@ class VAE_LightningSystem(pl.LightningModule):
         img = batch
         out, mu, log_var = self.net(img)
         loss = KL_R_Loss(out, img, mu, log_var, self.r_factor)
-        self.experiment.log_metric('train/loss', loss.item(), step=batch_idx)
+        self.log('train/loss', loss, on_epoch=True)
 
         return {'loss': loss}
 
@@ -54,21 +54,18 @@ class VAE_LightningSystem(pl.LightningModule):
         joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
         joined_images = np.transpose(joined_images, [1,2,0])
 
-        self.experiment.log_image(joined_images, name='genarative_img', step=self.step, image_channels='last')
-
-        self.step += 1
+        self.logger.experiment.log_image(joined_images, name='genarative_img', step=self.current_epoch, image_channels='last')
 
         return None
 
 
 # DCGAN - Lightning Module ---------------------------------------------------------------------------
 class DCGAN_LightningSystem(pl.LightningModule):
-    def __init__(self, G, D, cfg, experiment, checkpoint_path=None):
+    def __init__(self, G, D, cfg, checkpoint_path=None):
         super(DCGAN_LightningSystem, self).__init__()
         self.G = G
         self.D = D
         self.lr = cfg.train.lr
-        self.experiment = experiment
         self.epoch = cfg.train.epoch
         self.z_dim = cfg.train.z_dim
         self.checkpoint_path = checkpoint_path
@@ -101,7 +98,7 @@ class DCGAN_LightningSystem(pl.LightningModule):
 
             D_loss = (true_D_loss + fake_D_loss) / 2
 
-            self.experiment.log_metric('train/D_loss', D_loss.detach(), step=self.cnt_train_step)
+            self.log('train/D_loss', D_loss, on_epoch=True)
 
             return {'loss': D_loss}
 
@@ -110,9 +107,7 @@ class DCGAN_LightningSystem(pl.LightningModule):
             z = torch.randn(b, self.z_dim).cuda()
             g_fake_out = self.D(self.G(z))
             G_loss = self.criterion(g_fake_out, valid)
-            self.experiment.log_metric('train/G_loss', G_loss.detach(), step=self.cnt_train_step)
-
-            self.cnt_train_step += 1
+            self.log('train/G_loss', G_loss, on_epoch=True)
 
             return {'loss': G_loss}
 
@@ -132,7 +127,7 @@ class DCGAN_LightningSystem(pl.LightningModule):
         joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
         joined_images = np.transpose(joined_images, [1,2,0])
 
-        self.experiment.log_image(joined_images, name='genarative_img', step=self.step, image_channels='last')
+        self.logger.experiment.log_image(joined_images, name='genarative_img', step=self.step, image_channels='last')
 
         self.step += 1
 
@@ -140,20 +135,19 @@ class DCGAN_LightningSystem(pl.LightningModule):
         if self.checkpoint_path is not None:
             checkpoint_paths = glob.glob(os.path.join(self.checkpoint_path, 'gan*'))
             for path in checkpoint_paths:
-                self.experiment.log_asset(file_data=path, copy_to_tmp=True, overwrite=False)
+                self.logger.experiment.log_asset(file_data=path, copy_to_tmp=True, overwrite=False)
 
         return None
 
 
 # WGAN-GP - Lightning Module ---------------------------------------------------------------------------
 class WGAN_GP_LightningSystem(pl.LightningModule):
-    def __init__(self, G, D, cfg, experiment, checkpoint_path=None):
+    def __init__(self, G, D, cfg, checkpoint_path=None):
         super(WGAN_GP_LightningSystem, self).__init__()
         self.G = G
         self.D = D
         self.lr = cfg.train.lr
         self.cfg = cfg
-        self.experiment = experiment
         self.checkpoint_path = checkpoint_path
         self.cnt_train_step = 0
 
@@ -235,7 +229,7 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
 
 # CycleGAN - Lightning Module ---------------------------------------------------------------------------
 class CycleGAN_LightningSystem(pl.LightningModule):
-    def __init__(self, G_basestyle, G_stylebase, D_base, D_style, transform, experiment, cfg, checkpoint_path=None):
+    def __init__(self, G_basestyle, G_stylebase, D_base, D_style, transform, cfg, checkpoint_path=None):
         super(CycleGAN_LightningSystem, self).__init__()
         self.G_basestyle = G_basestyle
         self.G_stylebase = G_stylebase
@@ -245,7 +239,6 @@ class CycleGAN_LightningSystem(pl.LightningModule):
         self.transform = transform
         self.reconstr_w = cfg.cyclegan.reconstr_w
         self.id_w = cfg.cyclegan.id_w
-        self.experiment = experiment
         self.cfg = cfg
         self.checkpoint_path = checkpoint_path
         self.cnt_train_step = 0
@@ -296,7 +289,10 @@ class CycleGAN_LightningSystem(pl.LightningModule):
             G_loss = val_loss + self.reconstr_w * reconstr_loss + self.id_w * id_loss
 
             logs = {'loss': G_loss, 'validity': val_loss, 'reconstr': reconstr_loss, 'identity': id_loss}
-            # self.experiment.log_metrics(logs, step=self.cnt_train_step)
+            self.log('train/G_loss', G_loss, on_epoch=True)
+            self.log('train/Validity', val_loss, on_epoch=True)
+            self.log('train/Reconstr', reconstr_loss, on_epoch=True)
+            self.log('train/Identity', id_loss, on_epoch=True)
 
             return logs
 
@@ -314,31 +310,20 @@ class CycleGAN_LightningSystem(pl.LightningModule):
             D_loss = (D_gen_loss + D_base_valid_loss + D_style_valid_loss) / 3
 
             logs = {'loss': D_loss}
-            # self.experiment.log_metric('D_loss', D_loss, step=self.cnt_train_step)
+            self.log('train/D_loss', D_loss, on_epoch=True)
 
             return logs
 
     def training_epoch_end(self, outputs):
-        self.cnt_epoch += 1
-
-        avg_loss = sum([torch.stack([x['loss'] for x in outputs[i]]).mean().detach() / 4 for i in range(4)])
-        G_mean_loss = sum([torch.stack([x['loss'] for x in outputs[i]]).mean().detach() / 2 for i in [0, 1]])
-        D_mean_loss = sum([torch.stack([x['loss'] for x in outputs[i]]).mean().detach() / 2 for i in [2, 3]])
-        validity = sum([torch.stack([x['validity'] for x in outputs[i]]).mean().detach() / 2 for i in [0, 1]])
-        reconstr = sum([torch.stack([x['reconstr'] for x in outputs[i]]).mean().detach() / 2 for i in [0, 1]])
-        identity = sum([torch.stack([x['identity'] for x in outputs[i]]).mean().detach() / 2 for i in [0, 1]])
-
-        logs = {
-            'avg_loss': avg_loss, 'G_mean_loss': G_mean_loss, 'D_mean_loss': D_mean_loss,
-            'validity': validity, 'reconstr': reconstr, 'identity': identity
-        }
-
-        self.experiment.log_metrics(logs, epoch=self.cnt_epoch)
-
-        if self.cnt_epoch % 1 == 0:
+        if self.current_epoch % 1 == 0:
             # Display Model Output
-            target_img_paths = glob.glob('./data/CelebA-HQ-img/*.jpg')[:8]
-            target_imgs = [self.transform(Image.open(path), phase='test') for path in target_img_paths]
+            data_dir = './data'
+            target_img_paths = glob.glob(os.path.join(data_dir, 'celeba_hq', '**/*.jpg'), recursive=True)[:8]
+            target_imgs = []
+            for path in target_img_paths:
+                img = cv2.imread(path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.uint8)
+                target_imgs.append(self.transform(img, phase='test'))
             target_imgs = torch.stack(target_imgs, dim=0)
             target_imgs = target_imgs.cuda()
 
@@ -354,18 +339,108 @@ class CycleGAN_LightningSystem(pl.LightningModule):
             joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
             joined_images = np.transpose(joined_images, [1, 2, 0])
 
-            self.experiment.log_image(joined_images, name='output_img', step=self.cnt_epoch, image_channels='last')
+            self.logger.experiment.log_image(joined_images, name='output_img', step=self.current_epoch, image_channels='last')
 
             # Save checkpoints
             if self.checkpoint_path is not None:
                 model = self.G_basestyle
-                weight_name = f'weight_epoch_{self.cnt_epoch}.pth'
+                weight_name = f'weight_epoch_{self.current_epoch}.pth'
                 weight_path = os.path.join(self.checkpoint_path, weight_name)
                 torch.save(model.state_dict(), weight_path)
                 time.sleep(3)
-                self.experiment.log_asset(file_data=weight_path)
+                self.logger.experiment.log_asset(file_data=weight_path)
                 os.remove(weight_path)
         else:
             pass
+
+        return None
+
+
+# SAGAN - Lightning Module ---------------------------------------------------------------------------
+class SAGAN_LightningSystem(pl.LightningModule):
+    def __init__(self, G, D, cfg, checkpoint_path=None):
+        super(SAGAN_LightningSystem, self).__init__()
+        self.G = G
+        self.D = D
+        self.lr = cfg.train.lr
+        self.cfg = cfg
+        self.checkpoint_path = checkpoint_path
+        self.cnt_train_step = 0
+
+    def configure_optimizers(self):
+        self.g_optimizer = optim.Adam(self.G.parameters(), lr=self.lr['G'], betas=(0.5, 0.999))
+        self.d_optimizer = optim.Adam(self.D.parameters(), lr=self.lr['D'], betas=(0.5, 0.999))
+
+        return [self.d_optimizer, self.g_optimizer], []
+
+    def training_step(self, batch, batch_idx, optimizer_idx):
+        img = batch
+        b = img.size()[0]
+        z = torch.randn(b, self.cfg.train.z_dim).cuda()
+        z = z.view(z.size(0), z.size(1), 1, 1)
+
+        # Train Discriminator
+        if optimizer_idx == 0:
+            d_true_out = self.D(img)
+            # hinge version of the adversarial loss
+            true_D_loss = torch.nn.ReLU()(1.0 - d_true_out).mean()
+
+            fake_img = self.G(z)
+            d_fake_out = self.D(fake_img)
+            # hinge version of the adversarial loss
+            fake_D_loss = torch.nn.ReLU()(1.0 + d_fake_out).mean()
+
+            # Interpolated
+            alpha = torch.rand(b, 1, 1, 1).cuda()
+            interpolated = (alpha * img + (1 - alpha) * fake_img.detach()).requires_grad_(True)
+            interpolated_out = self.D(interpolated)
+
+            gradient_criterion = GradientPaneltyLoss()
+            gradient_loss = gradient_criterion(interpolated_out, interpolated)
+
+            D_loss = true_D_loss + fake_D_loss + self.cfg.wgan_gp.gradientloss_weight * gradient_loss
+            self.log('train/D_loss_valid', true_D_loss, on_epoch=True)
+            self.log('train/D_loss_fake', fake_D_loss, on_epoch=True)
+            self.log('train/D_loss_gradient', gradient_loss, on_epoch=True)
+            self.log('train/D_loss', D_loss, on_epoch=True)
+
+            return {'loss': D_loss}
+
+        # Train Generator
+        elif optimizer_idx == 1:
+            g_fake_out = self.D(self.G(z))
+            # hinge version of the adversarial loss
+            G_loss = - g_fake_out.mean()
+            self.log('train/G_loss', G_loss, on_epoch=True)
+
+            # Update Counter
+            self.cnt_train_step += 1
+
+            return {'loss': G_loss}
+
+    def training_epoch_end(self, outputs):
+        # Generative Images
+        n_to_show = 16
+        znew = np.random.normal(size = (n_to_show, self.cfg.train.z_dim, 1, 1))
+        znew = torch.as_tensor(znew, dtype=torch.float32).cuda()
+
+        gen_img = self.G(znew)
+        # Reverse Normalization
+        gen_img = gen_img * 0.5 + 0.5
+        gen_img = gen_img * 255
+
+        joined_images_tensor = make_grid(gen_img, nrow=4, padding=2)
+
+        joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
+        joined_images = np.transpose(joined_images, [1,2,0])
+
+        self.logger.experiment.log_image(joined_images, name='genarative_img', step=self.current_epoch, image_channels='last')
+
+        del joined_images, joined_images_tensor
+
+        # Save checkpoints
+        if self.checkpoint_path is not None:
+            checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'sagan*')))
+            self.logger.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
 
         return None
