@@ -2,6 +2,7 @@ from .vae import VAE
 from .dcgan import Generator, Discriminator
 from .wgan_gp import WGAN_GP_Generator, WGAN_GP_Discriminator
 from .cycle_gan import CycleGAN_Unet_Generator_512, CycleGAN_Discriminator_512
+from .sagan import SAGAN_Generator, SAGAN_Discriminator
 
 from src.utils.utils import init_weights
 
@@ -18,7 +19,8 @@ def build_model(type, cfg):
         'cyclegan':[
             CycleGAN_Unet_Generator_512(), CycleGAN_Unet_Generator_512(),
             CycleGAN_Discriminator_512(), CycleGAN_Discriminator_512()
-        ]
+        ],
+        'sagan': [SAGAN_Generator(z_dim, filter=img_size // 4), SAGAN_Discriminator(filter=img_size // 4)]
     }
 
     models = model_dict[type]
