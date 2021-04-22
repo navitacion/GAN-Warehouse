@@ -93,8 +93,8 @@ class SAGAN_Generator(nn.Module):
             SA_UpsampleConvBatchRelu(filter * 8, filter * 8, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 8, filter * 4, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 4, stride=2, padding=1),
+            Self_Attention(in_dim=filter * 4),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 2, stride=2, padding=1),
-            Self_Attention(in_dim=filter * 2),
             SA_UpsampleConvBatchRelu(filter * 2, filter * 1, stride=2, padding=1),
             Self_Attention(in_dim=filter)
         )
