@@ -1,3 +1,4 @@
+import gc
 import torch
 from torch import nn
 
@@ -68,10 +69,9 @@ class SAGAN_Discriminator(nn.Module):
             SA_ConvBatchRelu(3, filter * 1, kernel_size=4, stride=2, padding=1),
             SA_ConvBatchRelu(filter * 1, filter * 2, kernel_size=4, stride=2, padding=1),
             SA_ConvBatchRelu(filter * 2, filter * 4, kernel_size=4, stride=2, padding=1),
-            SA_ConvBatchRelu(filter * 4, filter * 4, kernel_size=4, stride=2, padding=1),
             Self_Attention(in_dim=filter * 4),
+            SA_ConvBatchRelu(filter * 4, filter * 4, kernel_size=4, stride=2, padding=1),
             SA_ConvBatchRelu(filter * 4, filter * 8, kernel_size=4, stride=2, padding=1),
-            SA_ConvBatchRelu(filter * 8, filter * 8, kernel_size=4, stride=2, padding=1),
             Self_Attention(in_dim=filter * 8),
         )
 
@@ -90,7 +90,6 @@ class SAGAN_Generator(nn.Module):
         super(SAGAN_Generator, self).__init__()
         self.block = nn.Sequential(
             SA_UpsampleConvBatchRelu(z_dim, filter * 8),
-            SA_UpsampleConvBatchRelu(filter * 8, filter * 8, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 8, filter * 4, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 4, stride=2, padding=1),
             Self_Attention(in_dim=filter * 4),
