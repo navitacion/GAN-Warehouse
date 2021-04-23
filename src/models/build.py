@@ -20,7 +20,7 @@ def build_model(type, cfg):
             CycleGAN_Unet_Generator_512(), CycleGAN_Unet_Generator_512(),
             CycleGAN_Discriminator_512(), CycleGAN_Discriminator_512()
         ],
-        'sagan': [SAGAN_Generator(z_dim, filter=img_size // 4), SAGAN_Discriminator(filter=img_size // 4)]
+        'sagan': [SAGAN_Generator(z_dim, filter=cfg.sagan.filter), SAGAN_Discriminator(filter=cfg.sagan.filter)]
     }
 
     models = model_dict[type]
