@@ -1,3 +1,4 @@
+import gc
 import os, glob, random, time
 
 import cv2
@@ -221,7 +222,7 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
 
         # Save checkpoints
         if self.checkpoint_path is not None:
-            checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'wgan-gp*')))
+            checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'wgan_gp*')))
             self.logger.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
 
         return None
@@ -365,7 +366,6 @@ class SAGAN_LightningSystem(pl.LightningModule):
         self.lr = cfg.train.lr
         self.cfg = cfg
         self.checkpoint_path = checkpoint_path
-        self.cnt_train_step = 0
 
     def configure_optimizers(self):
         self.g_optimizer = optim.Adam(self.G.parameters(), lr=self.lr['G'], betas=(0.5, 0.999))
@@ -413,9 +413,6 @@ class SAGAN_LightningSystem(pl.LightningModule):
             G_loss = - g_fake_out.mean()
             self.log('train/G_loss', G_loss, on_epoch=True)
 
-            # Update Counter
-            self.cnt_train_step += 1
-
             return {'loss': G_loss}
 
     def training_epoch_end(self, outputs):
@@ -441,6 +438,7 @@ class SAGAN_LightningSystem(pl.LightningModule):
         # Save checkpoints
         if self.checkpoint_path is not None:
             checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'sagan*')))
-            self.logger.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
+            for path in checkpoint_paths:
+                self.logger.experiment.log_asset(file_data=path, overwrite=True)
 
         return None
