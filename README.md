@@ -16,6 +16,11 @@ bash download.sh afhq-dataset
 
 if you use "Comet ML", you should make ".env" file based on ".env.sample"
 
+```commandline
+COMET_ML_API_KEY = "<Comet_ML API Key>"
+COMET_ML_PROJECT_NAME = "<Comet_ML Project Name>"
+```
+
 
 ### Run Train
 
