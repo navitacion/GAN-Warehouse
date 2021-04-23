@@ -134,9 +134,10 @@ class DCGAN_LightningSystem(pl.LightningModule):
 
         # Save checkpoints
         if self.checkpoint_path is not None:
-            checkpoint_paths = glob.glob(os.path.join(self.checkpoint_path, 'gan*'))
+            checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'dcgan*')))
             for path in checkpoint_paths:
-                self.logger.experiment.log_asset(file_data=path, copy_to_tmp=True, overwrite=False)
+                self.logger.experiment.log_asset(file_data=path, overwrite=True)
+                time.sleep(3)
 
         return None
 
@@ -223,7 +224,9 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
         # Save checkpoints
         if self.checkpoint_path is not None:
             checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'wgan_gp*')))
-            self.logger.experiment.log_asset(file_data=checkpoint_paths[-1], overwrite=True)
+            for path in checkpoint_paths:
+                self.logger.experiment.log_asset(file_data=path, overwrite=True)
+                time.sleep(3)
 
         return None
 
@@ -440,5 +443,6 @@ class SAGAN_LightningSystem(pl.LightningModule):
             checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'sagan*')))
             for path in checkpoint_paths:
                 self.logger.experiment.log_asset(file_data=path, overwrite=True)
+                time.sleep(3)
 
         return None
