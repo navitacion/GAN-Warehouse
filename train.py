@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 from dotenv import load_dotenv
 
 from src.lightning import VAE_LightningSystem, DCGAN_LightningSystem, WGAN_GP_LightningSystem, CycleGAN_LightningSystem, SAGAN_LightningSystem
-from src.lightning import CelebAHQDataModule, CycleGANDataModule
+from src.lightning import CelebAHQDataModule, CycleGANDataModule, SingleImageDataModule
 from src.utils.augment import ImageTransform
 
 from src.models.build import build_model
@@ -24,6 +24,17 @@ def main(cfg: DictConfig):
     # Data Augmentation  --------------------------------------------------------
     transform = ImageTransform(cfg)
 
+    # DataModule  ---------------------------------------------------------------
+    dm = None
+    data_dir = './data'
+    if cfg.train.data == 'celeba_hq':
+        img_paths = glob.glob(os.path.join(data_dir, 'celeba_hq', '**/*.jpg'), recursive=True)
+        dm = SingleImageDataModule(img_paths, transform, cfg)
+
+    elif cfg.train.data == 'afhq':
+        img_paths = glob.glob(os.path.join(data_dir, 'afhq', '**/*.jpg'), recursive=True)
+        dm = SingleImageDataModule(img_paths, transform, cfg)
+
     # Model  --------------------------------------------------------------------
     nets = build_model(cfg.train.model, cfg)
 
@@ -37,26 +48,18 @@ def main(cfg: DictConfig):
 
 
     # Lightning Module  ---------------------------------------------------------
-    dm = None
     model = None
     checkpoint_path = 'checkpoints/'
     checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_path, filename='{epoch:02d}', prefix=cfg.train.model, period=1)
 
     if cfg.train.model == 'vae':
-        data_dir = 'data/'
-        dm = CelebAHQDataModule(data_dir, transform, cfg)
         model = VAE_LightningSystem(nets[0], cfg)
 
     elif cfg.train.model == 'dcgan':
-        data_dir = 'data/'
-        dm = CelebAHQDataModule(data_dir, transform, cfg)
-        cfg.train.img_size = 128
         model = DCGAN_LightningSystem(nets[0], nets[1], cfg, checkpoint_path)
 
     elif cfg.train.model == 'wgan_gp':
         logger.log_hyperparams(dict(cfg.wgan_gp))
-        data_dir = 'data/'
-        dm = CelebAHQDataModule(data_dir, transform, cfg)
         model = WGAN_GP_LightningSystem(nets[0], nets[1], cfg, checkpoint_path)
 
     elif cfg.train.model == 'cyclegan':
@@ -70,8 +73,6 @@ def main(cfg: DictConfig):
 
     elif cfg.train.model == 'sagan':
         logger.log_hyperparams(dict(cfg.sagan))
-        data_dir = 'data/'
-        dm = CelebAHQDataModule(data_dir, transform, cfg)
         model = SAGAN_LightningSystem(nets[0], nets[1], cfg, checkpoint_path)
 
     # Trainer  ---------------------------------------------------------
