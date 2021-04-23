@@ -3,22 +3,18 @@ import pandas as pd
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
-from src.utils.dataset import CelebDataset, CycleGanDataset, CelebHQDataset
+from src.utils.dataset import CycleGanDataset, CelebHQDataset, SingleImageDataset
 
-# DataModule ---------------------------------------------------------------------------
-class CelebADataModule(pl.LightningDataModule):
-    def __init__(self, data_dir, transform, cfg):
-        super(CelebADataModule, self).__init__()
-        self.data_dir = data_dir
+
+class SingleImageDataModule(pl.LightningDataModule):
+    def __init__(self, img_paths, transform, cfg):
+        super(SingleImageDataModule, self).__init__()
+        self.img_paths = img_paths
         self.transform = transform
         self.cfg = cfg
 
-    def prepare_data(self):
-        self.img_path = glob.glob(os.path.join(self.data_dir, 'img_align_celeba', 'img_align_celeba', '*.jpg'))
-        self.ano = pd.read_csv(os.path.join(self.data_dir, 'list_attr_celeba.csv'))
-
     def setup(self, stage=None):
-        self.train_dataset = CelebDataset(self.data_dir, self.ano, self.transform)
+        self.train_dataset = SingleImageDataset(self.img_paths, self.transform, phase='train')
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset,
