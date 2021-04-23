@@ -5,26 +5,24 @@ import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 
-# CelebA Dataset ---------------------------------------------------------------------------
-class CelebDataset(Dataset):
-    def __init__(self, data_dir, ano, transform, phase='train'):
-        self.data_dir = data_dir
-        self.img_ids = ano['image_id'].values
-        self.ano = ano
+
+class SingleImageDataset(Dataset):
+    def __init__(self, img_paths, transform, phase='train'):
         self.transform = transform
         self.phase = phase
+        self.img_paths = img_paths
 
     def __len__(self):
-        return len(self.ano)
+        return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img_id = self.img_ids[idx]
-        img_path = os.path.join(self.data_dir, 'img_align_celeba', 'img_align_celeba', img_id)
+        img_path = self.img_paths[idx]
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.uint8)
         img = self.transform(img, self.phase)
 
         return img
+
 
 
 # CelebA-HQ Dataset ---------------------------------------------------------------------------
