@@ -3,6 +3,7 @@ hydra:
     dir: hydra_output/
 
 train:
+  data: celeba_hq  # celeba_hq, afhq
   model: vae  # dcgan, wgan_gp, cyclegan
   num_workers: 8
   step_per_epoch: 1000
