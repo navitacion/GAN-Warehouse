@@ -8,7 +8,7 @@ train:
   num_workers: 8
   step_per_epoch: 1000
   epoch: 400
-  batch_size: 16
+  batch_size: 2
   lr: {"G": 0.00005, "D": 0.00005}
   img_size: &image_size 128
   z_dim: 200
@@ -27,6 +27,11 @@ cyclegan:
 
 sagan:
   filter: 128
+
+progan:
+  filter: 64
+  max_img_size: 1024
+  increase_residual_epoch: 2
 
 aug:
   aug_train:
