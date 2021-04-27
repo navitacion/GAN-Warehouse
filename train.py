@@ -79,6 +79,10 @@ def main(cfg: DictConfig):
         logger.log_hyperparams(dict(cfg.sagan))
         model = SAGAN_LightningSystem(nets[0], nets[1], cfg, checkpoint_path)
 
+    elif cfg.train.model == 'progan':
+        logger.log_hyperparams(dict(cfg.progan))
+        model = PROGAN_LightningSystem(nets[0], nets[1], cfg, checkpoint_path)
+
     # Trainer  ---------------------------------------------------------
     trainer = Trainer(
         logger=logger,
