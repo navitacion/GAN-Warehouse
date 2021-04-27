@@ -59,6 +59,7 @@ class SAGAN_Discriminator(nn.Module):
     def __init__(self, filter=128):
         super(SAGAN_Discriminator, self).__init__()
 
+        # self-attentionのin_dimが小さいほど処理が重くなる
         self.block = nn.Sequential(
             SA_ConvBatchRelu(3, filter * 1, kernel_size=4, stride=2, padding=1),
             SA_ConvBatchRelu(filter * 1, filter * 1, kernel_size=4, stride=2, padding=1),
@@ -67,7 +68,7 @@ class SAGAN_Discriminator(nn.Module):
             Self_Attention(in_dim=filter * 4),
             SA_ConvBatchRelu(filter * 4, filter * 4, kernel_size=4, stride=2, padding=1),
             SA_ConvBatchRelu(filter * 4, filter * 8, kernel_size=4, stride=2, padding=1),
-            # Self_Attention(in_dim=filter * 8),
+            Self_Attention(in_dim=filter * 8),
         )
 
         self.last = nn.utils.spectral_norm(nn.Conv2d(filter * 8, 1, kernel_size=4, stride=1))
@@ -85,13 +86,13 @@ class SAGAN_Generator(nn.Module):
         super(SAGAN_Generator, self).__init__()
         self.block = nn.Sequential(
             SA_UpsampleConvBatchRelu(z_dim, filter * 8),
+            Self_Attention(in_dim=filter * 8),
             SA_UpsampleConvBatchRelu(filter * 8, filter * 4, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 4, stride=2, padding=1),
             Self_Attention(in_dim=filter * 4),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 2, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 2, filter * 1, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 1, filter * 1, stride=2, padding=1),
-            # Self_Attention(in_dim=filter)
         )
 
         self.last = nn.Sequential(
