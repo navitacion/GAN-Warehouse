@@ -24,6 +24,8 @@ cyclegan:
   batch_size: 1
   reconstr_w: 10
   id_w: 5
+  base_imgs_dir : celeba_hq  # celeba_hq, afhq
+  style_imgs_dir : celeba_hq  # celeba_hq, afhq
 
 sagan:
   filter: 128
