@@ -82,8 +82,8 @@ class DCGAN_LightningSystem(pl.LightningModule):
 
         return [self.d_optimizer, self.g_optimizer], [self.d_scheduler, self.g_scheduler]
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        img = batch
+    def training_step(self, img, batch_idx, optimizer_idx):
+        # img = batch
         b = img.size()[0]
         valid = torch.ones((b, 1)).cuda()
         fake = torch.zeros((b, 1)).cuda()
@@ -160,8 +160,8 @@ class WGAN_GP_LightningSystem(pl.LightningModule):
 
         return [self.d_optimizer, self.g_optimizer], []
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        img = batch
+    def training_step(self, img, batch_idx, optimizer_idx):
+        # img = batch
         b = img.size()[0]
         z = torch.randn(b, self.cfg.train.z_dim).cuda()
 
@@ -376,8 +376,8 @@ class SAGAN_LightningSystem(pl.LightningModule):
 
         return [self.d_optimizer, self.g_optimizer], []
 
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        img = batch
+    def training_step(self, img, batch_idx, optimizer_idx):
+        # img = batch
         b = img.size()[0]
         z = torch.randn(b, self.cfg.train.z_dim).cuda()
         z = z.view(z.size(0), z.size(1), 1, 1)
