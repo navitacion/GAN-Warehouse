@@ -1,5 +1,6 @@
 from abc import ABCMeta
 import albumentations as A
+import cv2
 from albumentations.pytorch import ToTensorV2
 
 
@@ -31,4 +32,20 @@ class ImageTransform(BaseTransform):
             'train': A.Compose(transform_train_list, p=1.0),
             'val': A.Compose(transform_val_list, p=1.0),
             'test': A.Compose(transform_test_list, p=1.0)
+        }
+
+class PROGANImageTransform(BaseTransform):
+    def __init__(self, img_size):
+        super(PROGANImageTransform, self).__init__()
+
+        transforms = [
+            A.Resize(img_size, img_size, interpolation=cv2.INTER_AREA),
+            A.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            ToTensorV2()
+        ]
+
+        self.transform = {
+            'train': A.Compose(transforms),
+            'val': A.Compose(transforms),
+            'test': A.Compose(transforms)
         }
