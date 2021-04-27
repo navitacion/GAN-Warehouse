@@ -446,3 +446,109 @@ class SAGAN_LightningSystem(pl.LightningModule):
                 time.sleep(3)
 
         return None
+
+
+# PROGAN - Lightning Module ---------------------------------------------------------------------------
+from src.utils.augment import PROGANImageTransform
+class PROGAN_LightningSystem(pl.LightningModule):
+    def __init__(self, G, D, cfg, checkpoint_path=None):
+        super(PROGAN_LightningSystem, self).__init__()
+        self.G = G
+        self.D = D
+        self.lr = cfg.train.lr
+        self.cfg = cfg
+        self.checkpoint_path = checkpoint_path
+        self.residual = 2  # First 4 * 4 (2 ** residual) Output
+
+    def configure_optimizers(self):
+        self.g_optimizer = optim.Adam(self.G.parameters(), lr=self.lr['G'], betas=(0.5, 0.999))
+        self.d_optimizer = optim.Adam(self.D.parameters(), lr=self.lr['D'], betas=(0.5, 0.999))
+
+        return [self.d_optimizer, self.g_optimizer], []
+
+    def training_step(self, img, batch_idx, optimizer_idx):
+        # img = batch
+        # del batch
+        # gc.collect()
+        img = img.cpu().numpy()
+
+        # Resize
+        target_img_size = int(2 ** self.residual)
+        transform = PROGANImageTransform(img_size=target_img_size)
+        img = [transform(im, phase='train') for im in img]
+        img = torch.stack(img).cuda()
+
+        b = img.size()[0]
+        z = torch.randn(b, self.cfg.train.z_dim).cuda()
+        z = z.view(z.size(0), z.size(1), 1, 1)
+
+        # Train Discriminator
+        if optimizer_idx == 0:
+            d_true_out = self.D(img, self.residual)
+            # hinge version of the adversarial loss
+            true_D_loss = torch.nn.ReLU()(1.0 - d_true_out).mean()
+
+            fake_img = self.G(z, self.residual)
+            d_fake_out = self.D(fake_img, self.residual)
+            # hinge version of the adversarial loss
+            fake_D_loss = torch.nn.ReLU()(1.0 + d_fake_out).mean()
+
+            # Interpolated
+            alpha = torch.rand(b, 1, 1, 1).cuda()
+            interpolated = (alpha * img + (1 - alpha) * fake_img.detach()).requires_grad_(True)
+            interpolated_out = self.D(interpolated, self.residual)
+
+            gradient_criterion = GradientPaneltyLoss()
+            gradient_loss = gradient_criterion(interpolated_out, interpolated)
+
+            D_loss = true_D_loss + fake_D_loss + self.cfg.wgan_gp.gradientloss_weight * gradient_loss
+            self.log('train/D_loss_valid', true_D_loss, on_epoch=True)
+            self.log('train/D_loss_fake', fake_D_loss, on_epoch=True)
+            self.log('train/D_loss_gradient', gradient_loss, on_epoch=True)
+            self.log('train/D_loss', D_loss, on_epoch=True)
+
+            return {'loss': D_loss}
+
+        # Train Generator
+        elif optimizer_idx == 1:
+            g_fake_out = self.D(self.G(z, self.residual), self.residual)
+            # hinge version of the adversarial loss
+            G_loss = - g_fake_out.mean()
+            self.log('train/G_loss', G_loss, on_epoch=True)
+
+            return {'loss': G_loss}
+
+    def training_epoch_end(self, outputs):
+        # Generative Images
+        n_to_show = 16
+        znew = np.random.normal(size = (n_to_show, self.cfg.train.z_dim, 1, 1))
+        znew = torch.as_tensor(znew, dtype=torch.float32).cuda()
+
+        gen_img = self.G(znew, self.residual)
+        # Reverse Normalization
+        gen_img = gen_img * 0.5 + 0.5
+        gen_img = gen_img * 255
+
+        joined_images_tensor = make_grid(gen_img, nrow=4, padding=2)
+
+        joined_images = joined_images_tensor.detach().cpu().numpy().astype(int)
+        joined_images = np.transpose(joined_images, [1,2,0])
+
+        self.logger.experiment.log_image(joined_images, name='genarative_img', step=self.current_epoch, image_channels='last')
+
+        del joined_images, joined_images_tensor
+
+        # Save checkpoints
+        if self.checkpoint_path is not None:
+            checkpoint_paths = sorted(glob.glob(os.path.join(self.checkpoint_path, 'sagan*')))
+            for path in checkpoint_paths:
+                self.logger.experiment.log_asset(file_data=path, overwrite=True)
+                time.sleep(3)
+
+
+        # Scheduling Increase Residual
+        if self.residual < np.log2(self.cfg.progan.max_img_size):
+            if (self.current_epoch + 1) % self.cfg.progan.increase_residual_epoch == 0:
+                self.residual += 1
+
+        return None
