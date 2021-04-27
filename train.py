@@ -35,6 +35,10 @@ def main(cfg: DictConfig):
         img_paths = glob.glob(os.path.join(data_dir, 'afhq', '**/*.jpg'), recursive=True)
         dm = SingleImageDataModule(img_paths, transform, cfg)
 
+    elif cfg.train.data == 'ffhq':
+        img_paths = glob.glob(os.path.join(data_dir, 'ffhq', '**/*.png'), recursive=True)
+        dm = SingleImageDataModule(img_paths, transform, cfg)
+
     # Model  --------------------------------------------------------------------
     nets = build_model(cfg.train.model, cfg)
 
