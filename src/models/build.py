@@ -3,6 +3,7 @@ from .dcgan import Generator, Discriminator
 from .wgan_gp import WGAN_GP_Generator, WGAN_GP_Discriminator
 from .cycle_gan import CycleGAN_Unet_Generator_512, CycleGAN_Discriminator_512
 from .sagan import SAGAN_Generator, SAGAN_Discriminator
+from .progan import Pro_Generator, Pro_Discriminator
 
 from src.utils.utils import init_weights
 
@@ -14,13 +15,26 @@ def build_model(type, cfg):
 
     model_dict = {
         'vae': [VAE(z_dim)],
-        'dcgan': [Generator(z_dim, img_size), Discriminator(img_size)],
-        'wgan_gp': [WGAN_GP_Generator(z_dim, img_size), WGAN_GP_Discriminator(img_size)],
+        'dcgan': [
+            Generator(z_dim, img_size),
+            Discriminator(img_size)
+        ],
+        'wgan_gp': [
+            WGAN_GP_Generator(z_dim, img_size),
+            WGAN_GP_Discriminator(img_size)
+        ],
         'cyclegan':[
             CycleGAN_Unet_Generator_512(), CycleGAN_Unet_Generator_512(),
             CycleGAN_Discriminator_512(), CycleGAN_Discriminator_512()
         ],
-        'sagan': [SAGAN_Generator(z_dim, filter=cfg.sagan.filter), SAGAN_Discriminator(filter=cfg.sagan.filter)]
+        'sagan': [
+            SAGAN_Generator(z_dim, filter=cfg.sagan.filter),
+            SAGAN_Discriminator(filter=cfg.sagan.filter)
+        ],
+        'progan': [
+            Pro_Generator(z_dim, filter=cfg.progan.filter, max_img_size=cfg.progan.max_img_size),
+            Pro_Discriminator(filter=cfg.progan.filter, max_img_size=cfg.progan.max_img_size)
+        ]
     }
 
     models = model_dict[type]
