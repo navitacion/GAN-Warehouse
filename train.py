@@ -8,8 +8,8 @@ import hydra
 from omegaconf import DictConfig
 from dotenv import load_dotenv
 
-from src.lightning import VAE_LightningSystem, DCGAN_LightningSystem, WGAN_GP_LightningSystem, CycleGAN_LightningSystem, SAGAN_LightningSystem
-from src.lightning import CelebAHQDataModule, CycleGANDataModule, SingleImageDataModule
+from src.lightning import VAE_LightningSystem, DCGAN_LightningSystem, WGAN_GP_LightningSystem, CycleGAN_LightningSystem, SAGAN_LightningSystem, PROGAN_LightningSystem
+from src.lightning import CycleGANDataModule, SingleImageDataModule
 from src.utils.augment import ImageTransform
 
 from src.models.build import build_model
@@ -22,7 +22,7 @@ def main(cfg: DictConfig):
     os.chdir(cur_dir)
 
     # Data Augmentation  --------------------------------------------------------
-    transform = ImageTransform(cfg)
+    transform = ImageTransform(cfg) if cfg.train.model != 'progan' else None
 
     # DataModule  ---------------------------------------------------------------
     dm = None
@@ -65,8 +65,8 @@ def main(cfg: DictConfig):
     elif cfg.train.model == 'cyclegan':
         logger.log_hyperparams(dict(cfg.cyclegan))
         data_dir = 'data/'
-        base_img_paths = glob.glob(os.path.join(data_dir, 'celeba_hq', '**/*.jpg'), recursive=True)
-        style_img_paths = glob.glob(os.path.join(data_dir, 'van_gogh_paintings', '**/*.jpg'), recursive=True)
+        base_img_paths = glob.glob(os.path.join(data_dir, cfg.cyclegan.base_imgs_dir, '**/*.jpg'), recursive=True)
+        style_img_paths = glob.glob(os.path.join(data_dir, cfg.cyclegan.style_imgs_dir, '**/*.jpg'), recursive=True)
         dm = CycleGANDataModule(base_img_paths, style_img_paths, transform, cfg, phase='train', seed=cfg.train.seed)
         model = CycleGAN_LightningSystem(nets[0], nets[1], nets[2], nets[3],
                                          transform, cfg, checkpoint_path)
@@ -81,7 +81,8 @@ def main(cfg: DictConfig):
         max_epochs=cfg.train.epoch,
         gpus=1,
         callbacks=[checkpoint_callback],
-        # resume_from_checkpoint='./checkpoints/epoch=30.ckpt'
+        # fast_dev_run=True,
+        # resume_from_checkpoint='./checkpoints/sagan-epoch=18.ckpt'
     )
 
     # Train
