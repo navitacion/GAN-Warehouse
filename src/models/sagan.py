@@ -38,7 +38,7 @@ class SA_ConvBatchRelu(nn.Module):
         super(SA_ConvBatchRelu, self).__init__()
         self.block = nn.Sequential(
             nn.utils.spectral_norm(nn.Conv2d(in_chennels, out_channels, kernel_size, stride, padding)),
-            nn.BatchNorm2d(out_channels),
+            # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1, inplace=True),
         )
 
@@ -75,7 +75,7 @@ class SAGAN_Discriminator(nn.Module):
             Self_Attention(in_dim=filter * 8),
         )
 
-        self.last = nn.Conv2d(filter * 8, 1, kernel_size=4, stride=1)
+        self.last = nn.utils.spectral_norm(nn.Conv2d(filter * 8, 1, kernel_size=4, stride=1))
 
 
     def forward(self, x):
