@@ -3,9 +3,9 @@ import pandas as pd
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
-from src.utils.dataset import CycleGanDataset, CelebHQDataset, SingleImageDataset
+from src.utils.dataset import CycleGANDataset, SingleImageDataset
 
-
+# DataModule ---------------------------------------------------------------------------
 class SingleImageDataModule(pl.LightningDataModule):
     def __init__(self, img_paths, transform, cfg):
         super(SingleImageDataModule, self).__init__()
@@ -24,24 +24,6 @@ class SingleImageDataModule(pl.LightningDataModule):
                           pin_memory=True)
 
 
-# DataModule ---------------------------------------------------------------------------
-class CelebAHQDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir, transform, cfg):
-        super(CelebAHQDataModule, self).__init__()
-        self.data_dir = data_dir
-        self.transform = transform
-        self.cfg = cfg
-
-    def setup(self, stage=None):
-        self.train_dataset = CelebHQDataset(self.data_dir, self.transform, phase='train')
-
-    def train_dataloader(self):
-        return DataLoader(self.train_dataset,
-                          batch_size=self.cfg.train.batch_size,
-                          shuffle=True,
-                          num_workers=self.cfg.train.num_workers,
-                          pin_memory=True)
-
 
 # DataModule ---------------------------------------------------------------------------
 class CycleGANDataModule(pl.LightningDataModule):
@@ -59,7 +41,7 @@ class CycleGANDataModule(pl.LightningDataModule):
         random.shuffle(self.base_img_paths)
         random.shuffle(self.style_img_paths)
         random.seed(self.seed)
-        self.train_dataset = CycleGanDataset(self.base_img_paths[:self.cfg.train.step_per_epoch],
+        self.train_dataset = CycleGANDataset(self.base_img_paths[:self.cfg.train.step_per_epoch],
                                              self.style_img_paths[:self.cfg.train.step_per_epoch],
                                              self.transform, self.phase)
 
