@@ -86,12 +86,12 @@ class SAGAN_Generator(nn.Module):
         super(SAGAN_Generator, self).__init__()
         self.block = nn.Sequential(
             SA_UpsampleConvBatchRelu(z_dim, filter * 8),
-            Self_Attention(in_dim=filter * 8),
             SA_UpsampleConvBatchRelu(filter * 8, filter * 4, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 4, stride=2, padding=1),
             Self_Attention(in_dim=filter * 4),
             SA_UpsampleConvBatchRelu(filter * 4, filter * 2, stride=2, padding=1),
             SA_UpsampleConvBatchRelu(filter * 2, filter * 1, stride=2, padding=1),
+            Self_Attention(in_dim=filter * 1),
             SA_UpsampleConvBatchRelu(filter * 1, filter * 1, stride=2, padding=1),
         )
 
