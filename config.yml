@@ -8,7 +8,7 @@ train:
   num_workers: 8
   step_per_epoch: 1000
   epoch: 400
-  batch_size: 8
+  batch_size: 4
   lr: {"G": 0.00005, "D": 0.00005}
   img_size: &image_size 256
   z_dim: 200
