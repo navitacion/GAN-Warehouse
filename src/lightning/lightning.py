@@ -476,10 +476,10 @@ class PROGAN_LightningSystem(pl.LightningModule):
         target_img_size = int(2 ** self.residual)
         transform = PROGANImageTransform(img_size=target_img_size)
         img = [transform(im, phase='train') for im in img]
-        img = torch.stack(img).cuda()
+        img = torch.stack(img).cuda().float()
 
         b = img.size()[0]
-        z = torch.randn(b, self.cfg.train.z_dim).cuda()
+        z = torch.randn(b, self.cfg.train.z_dim).cuda().float()
         z = z.view(z.size(0), z.size(1), 1, 1)
 
         # Train Discriminator
