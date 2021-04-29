@@ -89,10 +89,8 @@ def main(cfg: DictConfig):
         max_epochs=cfg.train.epoch,
         gpus=1,
         callbacks=[checkpoint_callback],
-        amp_level='O2',
-        amp_backend='apex',
         # fast_dev_run=True,
-        # resume_from_checkpoint='./checkpoints/sagan-epoch=18.ckpt'
+        # resume_from_checkpoint='./checkpoints/sagan-epoch=11.ckpt'
     )
 
     # Train
