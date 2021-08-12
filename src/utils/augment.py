@@ -2,7 +2,7 @@ from abc import ABCMeta
 import albumentations as A
 import cv2
 from albumentations.pytorch import ToTensorV2
-
+import numpy as np
 
 class BaseTransform(metaclass=ABCMeta):
     def __init__(self):
